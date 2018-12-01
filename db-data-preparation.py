@@ -11,6 +11,7 @@ import sys
 import numpy as np
 import pandas as pd
 from datetime import datetime
+import constant
 
 def count_check_in(last_available_stands, current_available_stands):
     diff = current_available_stands - last_available_stands 
@@ -37,9 +38,16 @@ def refine_min(min):
 def shorten_weekday(weekday_name):
     return weekday_name[0:3]
 
+def createFolder(directory):
+    try:
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+    except OSError:
+        print("Error while creating folder " + directory)
+
 # test: read a single file
 # get the relative path of file
-#rel_path = os.path.relpath("./raw-data/export2.csv")
+#rel_path = os.path.relpath("./raw-data/export1.csv")
 # read CSV files using Pandas
 #df = pd.read_csv(rel_path, delimiter = ",")
 
@@ -64,12 +72,15 @@ os.chdir(root_dir)
 print("Change back to root directory -> {0}".format(os.getcwd()))
 
 # remove data before 1st October 2016
-df = df[(df["last_update"] >= 1475276400000)]
+#df = df[(df["last_update"] >= 1475276400000)]
 
 # TODO: find out how to remove duplicated data efficiently
 df = df.drop_duplicates()
 #cols = ["address","last_update","available_bike_stands"]
 #df = df.loc[(df[cols].shift() != df[cols]).any(axis=1)]
+
+# remove incomplete data
+df = df.dropna()
 
 # convert timestamp to readable date using pandas
 # reference https://pandas.pydata.org/pandas-docs/stable/generated/pandas.DatetimeIndex.html
@@ -105,16 +116,18 @@ df["last_available_stands"] = df["available_bike_stands"].shift(1)
 df["check_in"] = df.apply(lambda row: count_check_in(row["last_available_stands"], row["available_bike_stands"]), axis=1)
 df["check_out"] = df.apply(lambda row: count_check_out(row["last_available_stands"], row["available_bike_stands"]), axis=1)
 
-# get activity
-#df["activity"] = df.apply(lambda row: row["check_in"] + row["check_out"], axis=1)
-# it doesn't work, just note
-#df["activity"] = df.groupby(["number", "name", "address", "date", "time", "weekday"])["activity"].transform(lambda x: sum(x))
+# apply different aggregations per column by grouping by number, name, address, date, time, weekday
+df = df.groupby(["number", "name", "address", "date", "time", "weekday"]).agg({"bike_stands": "min", "available_bike_stands": "last", "check_in": "sum", "check_out": "sum"}).reset_index()
 
-#df = df.groupby(["number", "name", "address", "date", "time", "weekday"]).sum().reset_index()
-df = df.groupby(["number", "name", "address", "date", "time", "weekday"]).sum().reset_index()
-
-# subset dataframe
-df = df[["number","name","address","date","time","weekday","bike_stands","available_bike_stands","check_in","check_out"]]
+# make the saved data preparation directory
+createFolder("." + constant.CLEAN_DATA_DIR)
+# delete db_all_data.csv file if it exists there
+cleanDataFilePath = "." + constant.CLEAN_DATA_DIR + "/" + constant.CLEAN_DATA_FILE
+if os.path.exists(cleanDataFilePath):
+    os.remove(cleanDataFilePath)
+# save the data preparation for using later
+df.to_csv("./saved-data/db_all_data.csv", sep=",", encoding='utf-8', index=False)
 
 # print result out
-df
+#print(df)
+print(df[["address","date","time","bike_stands","available_bike_stands","check_in","check_out"]])
