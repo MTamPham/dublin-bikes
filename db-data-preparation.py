@@ -43,10 +43,10 @@ def createFolder(directory):
 
 start = time.time()
 
+# READ RAW DATA
 # read a single file
 #rel_path = os.path.relpath("./raw-data/export1.csv")
 #df = pd.read_csv(rel_path, delimiter = ",")
-
 # read multiple files
 root_dir = "/Users/tampm/MaynoothUniversity/CS440-SCIAFinalThesis/dublin-bikes"
 os.chdir(root_dir)
@@ -56,7 +56,6 @@ os.chdir(data_dir)
 print("Change to data directory -> {0}".format(os.getcwd()))
 # read all CSV files underneath
 df = pd.concat([pd.read_csv(f, delimiter=",", encoding='latin1') for f in os.listdir()], ignore_index = True, sort=False)
-
 # change back to root directory
 os.chdir(root_dir)
 print("Change back to root directory -> {0}".format(os.getcwd()))
@@ -84,10 +83,10 @@ df["time"] = df["last_update"].apply(lambda x: "%s:%s:00" % (x.strftime('%H'), r
 df["weekday"] = df["last_update"].dt.strftime("%a")
 
 # group by number and sort datetime in order
-df.sort_values(by=["number", "date", "time"])
+df.sort_values(by=["number", "date", "time"], inplace=True)
 
 # copy the available stands number of the previous row as last available stands number
-df["last_available_stands"] = df.groupby(["number", "name", "address", "date"])["available_bike_stands"].shift(1)
+df["last_available_stands"] = df.groupby(["number", "name", "address"])["available_bike_stands"].shift(1)
 # if last available stands is NaN, use the available bike stands number of that time
 df["last_available_stands"] = df.apply(
     lambda row: row["available_bike_stands"] if np.isnan(row["last_available_stands"]) else row["last_available_stands"],
@@ -108,11 +107,11 @@ df["check_in"] = df["diff"].apply(lambda x: count_check_in(x))
 df["check_out"] = df["diff"].apply(lambda x: count_check_out(x))
 
 # apply different aggregations per column by grouping by number, name, address, date, time, weekday
-df = df.groupby(["number", "name", "address", "date", "time", "weekday"]).agg({"bike_stands": "min", 
+df = df.groupby(["number", "name", "address", "last_update", "date", "time", "weekday"]).agg({"bike_stands": "min", 
         "diff": "sum", "available_bike_stands": "last", "check_in": "sum", "check_out": "sum"}).reset_index()
 
 # rename columns
-df = df.rename(columns={"number": "Number", "name": "Name", "address": "Address", "date": "Date", "time": "Time", "weekday": "Weekday", "bike_stands": "Bike Stands", "diff": "Diff", "available_bike_stands": "Available Bike Stands", "check_in": "Check In", "check_out": "Check Out"})
+df = df.rename(columns={"number": "Number", "name": "Name", "address": "Address", "last_update" : "Last Update", "date": "Date", "time": "Time", "weekday": "Weekday", "bike_stands": "Bike Stands", "diff": "Diff", "available_bike_stands": "Available Bike Stands", "check_in": "Check In", "check_out": "Check Out"})
 
 print("Saving data to CSV file")
 # make the saved data preparation directory
