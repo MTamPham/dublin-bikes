@@ -1,18 +1,18 @@
 '''
     Author: Tam M Pham
     Created date: 22/11/2018
-    Modified date: 25/11/2018
+    Modified date: 03/01/2019
     Description:
-        Prepare data for analyzing
+        Read raw data from multile CSV files, then pre-processing the data 
+        and finally store the data to file to re-use the data for exploring
+        and clustering
 '''
 
 import os
-import sys
 import numpy as np
 import pandas as pd
-from datetime import datetime
 import time
-import constant
+from common import Common
 
 def count_check_in(diff):
     if (diff > 0):
@@ -34,16 +34,11 @@ def refine_min(min):
     else: 
         return np.nan
 
-def createFolder(directory):
-    try:
-        if not os.path.exists(directory):
-            os.makedirs(directory)
-    except OSError:
-        print("Error while creating folder " + directory)
-
 start = time.time()
 
-# READ RAW DATA
+#########################################################
+##################### READ RAW DATA #####################
+#########################################################
 # read a single file
 #rel_path = os.path.relpath("./raw-data/export1.csv")
 #df = pd.read_csv(rel_path, delimiter = ",")
@@ -60,6 +55,9 @@ df = pd.concat([pd.read_csv(f, delimiter=",", encoding='latin1') for f in os.lis
 os.chdir(root_dir)
 print("Change back to root directory -> {0}".format(os.getcwd()))
 
+########################################################
+##################### DATA HANDLER #####################
+########################################################
 # remove Unnamed column with Nan values, don't know why it creates an unnamed column
 df = df.loc[:, ~df.columns.str.contains('^Unnamed')]
 
@@ -107,25 +105,37 @@ df["check_in"] = df["diff"].apply(lambda x: count_check_in(x))
 df["check_out"] = df["diff"].apply(lambda x: count_check_out(x))
 
 # apply different aggregations per column by grouping by number, name, address, date, time, weekday
-df = df.groupby(["number", "name", "address", "last_update", "date", "time", "weekday"]).agg({"bike_stands": "min", 
+df = df.groupby(["number", "name", "address", "date", "time", "weekday"]).agg({"bike_stands": "min", 
         "diff": "sum", "available_bike_stands": "last", "check_in": "sum", "check_out": "sum"}).reset_index()
 
-# rename columns
-df = df.rename(columns={"number": "Number", "name": "Name", "address": "Address", "last_update" : "Last Update", "date": "Date", "time": "Time", "weekday": "Weekday", "bike_stands": "Bike Stands", "diff": "Diff", "available_bike_stands": "Available Bike Stands", "check_in": "Check In", "check_out": "Check Out"})
+'''
+    A few data rows though have different last update value, they have the same time after calling refine_min()
+    e.g
+    7,HIGH STREET,High Street,2016-09-13 05:24:17+00:00,2016-09-13,05:20:00,Tue,29,-8,10,0,8
+    7,HIGH STREET,High Street,2016-09-13 05:29:05+00:00,2016-09-13,05:20:00,Tue,29,-8,2,0,8
+    so I need to drop duplicates
+'''
+# detect and remove duplicated data
+#df["is_duplicated"] = df.duplicated()
+df.drop_duplicates(keep="first", inplace=True)
 
+# rename columns
+df = df.rename(columns={"number": "Number", "name": "Name", "address": "Address", "date": "Date", "time": "Time", "weekday": "Weekday", "bike_stands": "Bike Stands", "diff": "Diff", "available_bike_stands": "Available Bike Stands", "check_in": "Check In", "check_out": "Check Out"})
+
+###############################################################
+############### SAVE PREPROCESSING DATA TO FILE ###############
+###############################################################
 print("Saving data to CSV file")
 # make the saved data preparation directory
-createFolder("." + constant.CLEAN_DATA_DIR)
+Common.createFolder(Common.CLEAN_DATA_DIR)
 # delete db_all_data.csv file if it exists there
-cleanDataFilePath = "." + constant.CLEAN_DATA_DIR + "/" + constant.CLEAN_DATA_FILE
-if os.path.exists(cleanDataFilePath):
-    os.remove(cleanDataFilePath)
+Common.deleteFile(Common.CLEAN_DATA_FILE_FULL_PATH)
 # save the data preparation for using later
-df.to_csv(cleanDataFilePath, sep=",", encoding='utf-8', index=False)
+Common.saveCSV(df, Common.CLEAN_DATA_FILE_FULL_PATH)
 
 # print result out
 #print(df)
-#print(df[["address","date","time","bike_stands","available_bike_stands","check_in","check_out"]])
+#print(df[["Address","Date","Time","Bike Stands","Available Bike Stands","Check In","Check Out"]])
 
 end = time.time()
 print("Done preparation after {} seconds".format((end - start)))
