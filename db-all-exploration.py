@@ -1,7 +1,7 @@
 '''
     Author: Tam M Pham
     Created date: 22/11/2018
-    Modified date: 02/12/2018
+    Modified date: 03/01/2019
     Description:
         Plotting distribution of activity throughout the week
         Finding the most 10th busy and least 10th busy stations
@@ -12,57 +12,83 @@ import numpy as np
 import pandas as pd
 import calendar
 import time
-import constant
+from common import Common
+import matplotlib.pyplot as plt
 
 start = time.time()
 
 print("Please be patient, it might take a while...")
 
-def createFolder(directory):
-    try:
-        if not os.path.exists(directory):
-            os.makedirs(directory)
-    except OSError:
-        print("Error while creating folder " + directory)
-
 # get the relative path of preparation data file
-rel_path = "." + constant.CLEAN_DATA_DIR + "/" + constant.CLEAN_DATA_FILE
-rel_path = os.path.relpath(rel_path)
+rel_path = os.path.relpath(Common.CLEAN_DATA_FILE_FULL_PATH)
 
 # read CSV files using Pandas
-df = pd.read_csv(rel_path, delimiter = ",", parse_dates=["date"])
+df = pd.read_csv(rel_path, delimiter = ",", parse_dates=["Date"])
 
-# calculate total activity of each timestamp of a station
-df["total_activity"] = df.apply(lambda row: row["check_in"] + row["check_out"], axis = 1)
-df = df[["number", "address", "date", "weekday", "total_activity"]]
-df = df.groupby(["address", "weekday"])["total_activity"].sum()
+# see how many occurrence of data for date, the date which has minor values (<10) means the data is somehow missing
+#print(df.groupby([df["Date"].dt.date])["Date"].count())
 
-# after calculating the sum of total activiy, the current index is address; we need to reset the index to start from 0
-df = df.reset_index()
+# after viewing, notice that July 2016 has minor values
+#print(df[df["Date"].dt.month == 7].reset_index(drop=True))
 
-# make weekday into columns, 
-df_weekday = df.pivot(index = "address", columns = "weekday", values = "total_activity")
-# fill Nan value by 0
-df_weekday = df_weekday.fillna(0)
-# order weekday, it should be ordered as "Mon","Tue","Wed","Thu","Fri","Sat", "Sun"
-days = ["Mon","Tue","Wed","Thu","Fri","Sat", "Sun"]
-df_weekday = df_weekday.reindex(columns=days)
-#print(df_weekday)
+top_check_ins = pd.DataFrame(df.groupby(df["Address"])["Check In"].sum().sort_values(ascending=False).head(10))
+top_check_ins = pd.merge(top_check_ins, df, on="Address")
+#print("Top 10 check in stations:")
+#print(top_check_ins)
 
-# box plot distribution of activity throughout the week
-boxplot = df_weekday.boxplot(column=days)
-figure = boxplot.get_figure()
-createFolder("." + constant.PLOTS_DIR)
-plot_path = "." + constant.PLOTS_DIR + "/usage_through_week.png"
-figure.savefig(plot_path)
+top_check_outs = pd.DataFrame(df.groupby(df["Address"])["Check Out"].sum().sort_values(ascending=False).head(10))
+top_check_outs = pd.merge(top_check_outs, df, on="Address")
+#print("Top 10 check out stations:")
+#print(top_check_outs)
 
-# find the most busy station (which has the highest total activity)
-df_busy_stations = df.copy()
-df_busy_stations = df_busy_stations.groupby("address").agg({"total_activity": "sum"})
-print("The most 10th busy stations are: ")
-print(df_busy_stations.head(10))
-print("The least 10th busy stations are: ")
-print(df_busy_stations.tail(10))
+total_activity = df.copy()
+total_activity["Total Activity"] = total_activity["Check In"] + total_activity["Check Out"]
+total_activity = total_activity.groupby(total_activity["Address"])["Total Activity"].sum()
+
+top_activity = total_activity.copy().sort_values(ascending=False).head(10)
+#print("Top 10 busiest stations:")
+#print(top_activity)
+
+bot_activity = total_activity.copy().sort_values().head(10)
+#print("Top 10 quiest stations:")
+#print(bot_activity)
+
+##############################################################
+################# FIND AVERAGE USAGE PER DAY #################
+##############################################################
+avg_ci_usage_day = df.copy()
+avg_ci_usage_day = avg_ci_usage_day.groupby(["Number", "Name", "Weekday"])["Check In"].mean()
+avg_ci_usage_day = avg_ci_usage_day.unstack()
+avg_ci_usage_day.boxplot(column=Common.SHORT_WEEKDAY_ORDER)
+plt.title("")   
+plt.suptitle("")    # get rid of the default title of box plotting
+plt.ylabel("avg_cin")
+plt.savefig(Common.PLOTS_DIR + "/avg_ci_usage_day.png")
+plt.gcf().clear()
+
+avg_co_usage_day = df.copy()
+avg_co_usage_day = avg_co_usage_day.groupby(["Number", "Name", "Weekday"])["Check Out"].mean()
+avg_co_usage_day = avg_co_usage_day.unstack()
+avg_co_usage_day.boxplot(column=Common.SHORT_WEEKDAY_ORDER)
+plt.title("")   
+plt.suptitle("")    # get rid of the default title of box plotting
+plt.ylabel("avg_cout")
+plt.savefig(Common.PLOTS_DIR + "/avg_co_usage_day.png")
+plt.gcf().clear()
+
+##############################################################
+##################### FIND USAGE PER DAY #####################
+##############################################################
+usage_day = df.copy()
+usage_day["Total Activity"] = usage_day["Check In"] + usage_day["Check Out"]
+usage_day = usage_day.groupby(["Number", "Name", "Weekday"])["Total Activity"].sum()
+usage_day = usage_day.unstack()
+usage_day.boxplot(column=Common.SHORT_WEEKDAY_ORDER)
+plt.title("Distribution of activity throughout the week")   
+plt.suptitle("")    # get rid of the default title of box plotting
+plt.ylabel("Activity")
+plt.savefig(Common.PLOTS_DIR + "/usage_day.png")
+plt.gcf().clear()
 
 end = time.time()
 print("Done exploration after {} seconds".format((end - start)))
