@@ -6,9 +6,22 @@ class Common:
     CLEAN_DATA_DIR = "./saved-data"
     CLEAN_DATA_FILE_FULL_PATH = "./saved-data/db_all_data.csv"
     #CLEAN_DATA_FILE_FULL_PATH = "./saved-data/db_new_data.csv"
+    CLUSTERED_DATA_FILE_FULL_PATH = "./saved-data/db_clustered_stations.csv"
     PLOTS_DIR = "./plots"
     CLUSTERING_PLOTS_DIR = "./plots/clustering"
     SHORT_WEEKDAY_ORDER = ['Mon','Tue','Wed','Thu','Fri','Sat', 'Sun']
+    CLUSTERING_NUMBER = 4
+
+    @staticmethod
+    def getDataFrameFromFile(path, notParseDate=False):
+        # get the relative path of preparation data file
+        rel_path = os.path.relpath(path)
+        # read CSV files using Pandas
+        if (notParseDate == False):
+            df = pd.read_csv(rel_path, delimiter = ",", parse_dates=["Date"])
+        else:
+            df = pd.read_csv(rel_path, delimiter = ",")
+        return df
 
     @staticmethod
     def createFolder(directory):
