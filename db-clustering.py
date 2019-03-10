@@ -126,7 +126,7 @@ plt.gcf().clear()
 ####################################################################
 ############### FIT THE DATA USING K-MEANS ALGORITHM ###############
 ####################################################################
-centroids_df = fit_data_using_kmeans(prep_df, 4, time_lvls)
+centroids_df = fit_data_using_kmeans(prep_df, Common.CLUSTERING_NUMBER, time_lvls)
 
 ###################################################################
 ############ PLOT THE DATA FOR CLUSTERING ALL STATIONS ############
@@ -171,7 +171,7 @@ ax.set(title = "Optimal number of clusters using Elbow method", xlabel="Number o
 #plt.savefig(Common.CLUSTERING_PLOTS_DIR + "/wss_weekdays.png")
 plt.gcf().clear()
 
-centroids_df = fit_data_using_kmeans(weekday_df, 4, time_lvls)
+centroids_df = fit_data_using_kmeans(weekday_df, Common.CLUSTERING_NUMBER, time_lvls)
 
 # plot available bike stands based on cluster number
 fig, ax = plt.subplots(figsize=(10, 9))
@@ -209,7 +209,7 @@ ax.set(title = "Optimal number of clusters using Elbow method", xlabel="Number o
 #plt.savefig(Common.CLUSTERING_PLOTS_DIR + "/wss_weekends.png")
 plt.gcf().clear()
 
-centroids_df = fit_data_using_kmeans(weekend_df, 4, time_lvls)
+centroids_df = fit_data_using_kmeans(weekend_df, Common.CLUSTERING_NUMBER, time_lvls)
 
 # plot available bike stands based on cluster number
 fig, ax = plt.subplots(figsize=(10, 9))
@@ -236,7 +236,7 @@ plt.gcf().clear()
 ##############################################################################
 ######### FIND THE SUITABLE CLUSTER NUMBER BELONGS TO EACH STATION ###########
 ##############################################################################
-centers = fit_data_using_kmeans(prep_df, 4, time_lvls)
+centers = fit_data_using_kmeans(prep_df, Common.CLUSTERING_NUMBER, time_lvls)
 centers = centers.groupby(["Cluster"])["Available Bike Stands"].sum().reset_index() # 1649.796156, 4065.806215, 3160.653014, 2417.590592
 centers = centers.rename(columns={"Available Bike Stands": "Sum Of Stands"})
 
@@ -246,7 +246,7 @@ agg_df = agg_df.rename(columns={"Available Bike Stands": "Stands"})
 agg_df["Cluster"] = "None"
 
 # Loop through each station and find the cluster which is closer to it
-for i in range(1, 102):
+for i in range(1, 103):
     # Get the sum of stands for each station
     sum_stands = agg_df[agg_df["Number"] == i]["Stands"].sum()
 
