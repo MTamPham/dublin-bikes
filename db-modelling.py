@@ -407,6 +407,11 @@ for i in range(1, Common.MAX_STATION_NUMBER + 1):
     #fig.savefig(f"{Common.PREDICTING_PLOTS_DIR}/unseen_prediction_{i}.png")
     plt.close()
 
+
+end = time.time()
+print("Done exploration after {} seconds".format((end - start)))
+sys.exit()
+
 ###################################################################
 ##################### TODO ###########################
 ###################################################################
@@ -441,5 +446,3 @@ ax.errorbar(hr_unseen_gb_df["Number"], hr_unseen_gb_df["Avg Bikes"], yerr=[hr_un
 fig.savefig("./inventory.png")
 plt.gcf().clear()
 
-end = time.time()
-print("Done exploration after {} seconds".format((end - start)))
