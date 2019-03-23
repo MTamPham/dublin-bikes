@@ -16,6 +16,7 @@ from sklearn.cluster import KMeans
 import datetime as dt
 import matplotlib.dates as mdates
 import matplotlib.ticker as ticker
+import sys
 
 start = time.time()
 print("Please be patient, it might take a while...")
@@ -117,11 +118,11 @@ Common.createFolder(Common.CLUSTERING_PLOTS_DIR)
 wss = calc_wss(prep_df)
 
 clusters_df = pd.DataFrame({"num_clusters": range(1, 15), "wss": wss})
-fig, ax = plt.subplots(figsize=(10, 9))
+fig, ax = plt.subplots(figsize=(7, 6))
 ax.plot(clusters_df.num_clusters, clusters_df.wss, marker = "o" )
 ax.set(title = "Optimal number of clusters using Elbow method", xlabel="Number of Clusters", ylabel="Total Within Sum of Squares")
-#plt.savefig(Common.CLUSTERING_PLOTS_DIR + "/wss_all_stations.png")
-plt.gcf().clear()
+fig.savefig(Common.CLUSTERING_PLOTS_DIR + "/wss_all_stations.png")
+fig.clear()
 
 ####################################################################
 ############### FIT THE DATA USING K-MEANS ALGORITHM ###############
@@ -131,8 +132,9 @@ centroids_df = fit_data_using_kmeans(prep_df, Common.CLUSTERING_NUMBER, time_lvl
 ###################################################################
 ############ PLOT THE DATA FOR CLUSTERING ALL STATIONS ############
 ###################################################################
+print("Plotting K-Means of all stations during the week")
 # plot available bike stands based on cluster number
-fig, ax = plt.subplots(figsize=(10, 9))
+fig, ax = plt.subplots(figsize=(8, 7))
 for label, cluster_df in centroids_df.groupby("Cluster"):
     ax.plot(cluster_df["Time"], cluster_df["Available Bike Stands"], label=label)
 # locate sticks every 1 hour
@@ -149,14 +151,16 @@ ax.legend(title="Cluster", bbox_to_anchor=(1.02, 0.65), loc=2, borderaxespad=0.)
 ax.grid(linestyle="-")
 # margin x at 0 and y at 0.1
 ax.margins(x=0.0, y=0.1)
+# set margins
+plt.subplots_adjust(left=0.09, right=0.85, top=0.95, bottom=0.1)
 # save the plot to file
-#plt.savefig(Common.CLUSTERING_PLOTS_DIR + "/clustering_all_stations.png")
-plt.gcf().clear()
+fig.savefig(Common.CLUSTERING_PLOTS_DIR + "/clustering_all_stations.png")
+fig.clear()
 
 ###################################################################
 ############### COMPARISON BETWEEN WEEKDAYS/ WEEKEND ##############
 ###################################################################
-weekdays = pd.Series(np.array(["Mon", "Tue", "Wed", "Thu"]))
+weekdays = pd.Series(np.array(["Mon", "Tue", "Wed", "Thu", "Fri"]))
 #################### WEEKDAYS ###################
 weekday_df = df[df["Weekday"].isin(weekdays)][["Number", "Date", "Time", "Available Bike Stands"]]
 # spread the data
@@ -165,16 +169,17 @@ weekday_df = spread_data_by_time(weekday_df)
 wss = calc_wss(weekday_df)
 
 clusters_df = pd.DataFrame({"num_clusters": range(1, 15), "wss": wss})
-fig, ax = plt.subplots(figsize=(10, 9))
+fig, ax = plt.subplots(figsize=(7, 6))
 ax.plot(clusters_df.num_clusters, clusters_df.wss, marker = "o" )
-ax.set(title = "Optimal number of clusters using Elbow method", xlabel="Number of Clusters", ylabel="Total Within Sum of Squares")
-#plt.savefig(Common.CLUSTERING_PLOTS_DIR + "/wss_weekdays.png")
-plt.gcf().clear()
+ax.set(title = "Weekdays (Mon - Fri) optimal number of clusters", xlabel="Number of Clusters", ylabel="Total Within Sum of Squares")
+fig.savefig(Common.CLUSTERING_PLOTS_DIR + "/wss_weekdays.png")
+fig.clear()
 
 centroids_df = fit_data_using_kmeans(weekday_df, Common.CLUSTERING_NUMBER, time_lvls)
 
+print("Plotting K-Means of all stations during weekdays")
 # plot available bike stands based on cluster number
-fig, ax = plt.subplots(figsize=(10, 9))
+fig, ax = plt.subplots(figsize=(8, 7))
 for label, cluster_df in centroids_df.groupby("Cluster"):
     ax.plot(cluster_df["Time"], cluster_df["Available Bike Stands"], label=label)
 # locate sticks every 1 hour
@@ -184,16 +189,18 @@ ax.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M"))
 # show rotate tick lables automatically with 30 degree, it would show 90 degree if we don't call it
 fig.autofmt_xdate()
 # set title, xlable and ylabel of the figure
-ax.set(title="Weekdays Clustering", xlabel="Hour of day", ylabel="Available Bike Stands")
+ax.set(title="Weekdays Clustering (Mon - Fri)", xlabel="Hour of day", ylabel="Available Bike Stands")
 # set location of legend
 ax.legend(title="Cluster", bbox_to_anchor=(1.02, 0.65), loc=2, borderaxespad=0.)
 # show grid
 ax.grid(linestyle="-")
 # margin x at 0 and y at 0.1
 ax.margins(x=0.0, y=0.1)
+# set margins
+plt.subplots_adjust(left=0.09, right=0.85, top=0.95, bottom=0.1)
 # save the plot to file
-#plt.savefig(Common.CLUSTERING_PLOTS_DIR + "/clustering_weekdays.png")
-plt.gcf().clear()
+fig.savefig(Common.CLUSTERING_PLOTS_DIR + "/clustering_weekdays.png")
+fig.clear()
 
 #################### WEEKENDS ###################
 weekend_df = df[~df["Weekday"].isin(weekdays)][["Number", "Date", "Time", "Available Bike Stands"]]
@@ -203,16 +210,17 @@ weekend_df = spread_data_by_time(weekend_df)
 wss = calc_wss(weekend_df)
 
 clusters_df = pd.DataFrame({"num_clusters": range(1, 15), "wss": wss})
-fig, ax = plt.subplots(figsize=(10, 9))
+fig, ax = plt.subplots(figsize=(7, 6))
 ax.plot(clusters_df.num_clusters, clusters_df.wss, marker = "o" )
-ax.set(title = "Optimal number of clusters using Elbow method", xlabel="Number of Clusters", ylabel="Total Within Sum of Squares")
-#plt.savefig(Common.CLUSTERING_PLOTS_DIR + "/wss_weekends.png")
-plt.gcf().clear()
+ax.set(title = "Weekends (Sat - Sun) optimal number of clusters", xlabel="Number of Clusters", ylabel="Total Within Sum of Squares")
+fig.savefig(Common.CLUSTERING_PLOTS_DIR + "/wss_weekends.png")
+fig.clear()
 
 centroids_df = fit_data_using_kmeans(weekend_df, Common.CLUSTERING_NUMBER, time_lvls)
 
+print("Plotting K-Means of all stations during weekends")
 # plot available bike stands based on cluster number
-fig, ax = plt.subplots(figsize=(10, 9))
+fig, ax = plt.subplots(figsize=(8, 7))
 for label, cluster_df in centroids_df.groupby("Cluster"):
     ax.plot(cluster_df["Time"], cluster_df["Available Bike Stands"], label=label)
 # locate sticks every 1 hour
@@ -222,16 +230,18 @@ ax.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M"))
 # show rotate tick lables automatically with 30 degree, it would show 90 degree if we don't call it
 fig.autofmt_xdate()
 # set title, xlable and ylabel of the figure
-ax.set(title="Weekends Clustering (Fri - Sun)", xlabel="Hour of day", ylabel="Available Bike Stands")
+ax.set(title="Weekends Clustering (Sat - Sun)", xlabel="Hour of day", ylabel="Available Bike Stands")
 # set location of legend
 ax.legend(title="Cluster", bbox_to_anchor=(1.02, 0.65), loc=2, borderaxespad=0.)
 # show grid
 ax.grid(linestyle="-")
 # margin x at 0 and y at 0.1
 ax.margins(x=0.0, y=0.1)
+# set margins
+plt.subplots_adjust(left=0.09, right=0.85, top=0.95, bottom=0.1)
 # save the plot to file
-#plt.savefig(Common.CLUSTERING_PLOTS_DIR + "/clustering_weekends.png")
-plt.gcf().clear()
+fig.savefig(Common.CLUSTERING_PLOTS_DIR + "/clustering_weekends.png")
+fig.clear()
 
 ##############################################################################
 ######### FIND THE SUITABLE CLUSTER NUMBER BELONGS TO EACH STATION ###########
