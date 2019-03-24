@@ -1,0 +1,18 @@
+# ignore all folders
+#**/
+
+# ignore specific folders
+/.ipynb_checkpoints
+/__pycache__
+/report30
+
+# ignore all CSV files
+*.csv
+
+# except db_new_data.csv, gb_model.csv, db_clustered_stations.csv
+#!db_new_data.csv
+#!gb_model.csv
+#!db_clustered_stations.csv
+
+# ignore all JSON files
+*.json
