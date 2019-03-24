@@ -46,12 +46,12 @@ total_activity["Total Activity"] = total_activity["Check In"] + total_activity["
 total_activity = total_activity.groupby(total_activity["Address"])["Total Activity"].sum()
 
 top_activity = total_activity.copy().sort_values(ascending=False).head(10)
-#print("Top 10 busiest stations:")
-#print(top_activity)
+print("Top 10 busiest stations:")
+print(top_activity)
 
 bot_activity = total_activity.copy().sort_values().head(10)
-#print("Top 10 quiest stations:")
-#print(bot_activity)
+print("Top 10 quiest stations:")
+print(bot_activity)
 
 ##############################################################
 ################# FIND AVERAGE USAGE PER DAY #################

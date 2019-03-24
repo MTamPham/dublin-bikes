@@ -120,7 +120,7 @@ df = df.groupby(["number", "name", "address", "date", "time", "weekday"]).agg({"
 df.drop_duplicates(keep="first", inplace=True)
 
 # rename columns
-df = df.rename(columns={"number": "Number", "name": "Name", "address": "Address", "date": "Date", "time": "Time", "weekday": "Weekday", "bike_stands": "Bike Stands", "diff": "Diff", "available_bike_stands": "Available Bike Stands", "check_in": "Check In", "check_out": "Check Out"})
+df = df.rename(columns={"number": "Number", "name": "Name", "address": "Address", "date": "Date", "time": "Time", "weekday": "Weekday", "bike_stands": "Bike Stands", "diff": "Diff", "available_bike_stands": "Available Stands", "check_in": "Check In", "check_out": "Check Out"})
 
 ###############################################################
 ############### SAVE PREPROCESSING DATA TO FILE ###############
@@ -135,7 +135,7 @@ Common.saveCSV(df, Common.CLEAN_DATA_FILE_FULL_PATH)
 
 # print result out
 #print(df)
-#print(df[["Address","Date","Time","Bike Stands","Available Bike Stands","Check In","Check Out"]])
+#print(df[["Address","Date","Time","Bike Stands","Available Stands","Check In","Check Out"]])
 
 end = time.time()
 print("Done preparation after {} seconds".format((end - start)))

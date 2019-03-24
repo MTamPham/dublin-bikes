@@ -42,7 +42,7 @@ def fill_na(df):
 def spread_data_by_time(df):
     "Spread the dataframe by time i.e. get values of time and make it become columns"
     # group data by Number, Date and Time
-    df = df.set_index(["Number", "Date", "Time"])["Available Bike Stands"]
+    df = df.set_index(["Number", "Date", "Time"])["Available Stands"]
     "Set multi-index"
     #print(df)
     # then unstack the data frame, reset index
@@ -75,13 +75,13 @@ def fit_data_using_kmeans(df, cluster_no, time_lvls):
     kfit = KMeans(n_clusters=cluster_no).fit(df)
     # predict the clusters
     labels = kfit.predict(df)
-    # get the cluster centers
+    # get the cluster centroids_df
     centroids = kfit.cluster_centers_
-    # format cluster centers to dateframe for viewing
+    # format cluster centroids_df to dateframe for viewing
     centroids_df = pd.DataFrame(centroids, columns=time_lvls)
     centroids_df["Cluster"] = centroids_df.index + 1
     # reshape the data for plotting
-    centroids_df = pd.melt(centroids_df, id_vars=["Cluster"], var_name="Time", value_name="Available Bike Stands")
+    centroids_df = pd.melt(centroids_df, id_vars=["Cluster"], var_name="Time", value_name="Available Stands")
     # convert Time from string to datetime to set x-ticks locator, it wouldn't work if Time is an object (string)
     # the best way to convert string to time is pd.to_datetime(centroids_df["Time"], format="%H:%M:%S").dt.time, 
     # but tick locator requires full datetime to work (TODO: research how to solve this problem later)
@@ -101,7 +101,7 @@ df = df[(df["Date"] >= "2016-10-14") & (df["Date"] <= "2017-10-14")].reset_index
 ############# DATA HANDLER FOR CLUSTERING ALL STATIONS ################
 #######################################################################
 # clone data frame from db_all_data.csv to another dataframe to pre-processing
-prep_df = df[["Number", "Date", "Time", "Available Bike Stands"]].copy()
+prep_df = df[["Number", "Date", "Time", "Available Stands"]].copy()
 # spread the data
 prep_df = spread_data_by_time(prep_df)
 
@@ -128,6 +128,35 @@ fig.clear()
 ############### FIT THE DATA USING K-MEANS ALGORITHM ###############
 ####################################################################
 centroids_df = fit_data_using_kmeans(prep_df, Common.CLUSTERING_NUMBER, time_lvls)
+#print(centroids_df)
+
+##############################################################################
+######### FIND THE SUITABLE CLUSTER NUMBER BELONGS TO EACH STATION ###########
+##############################################################################
+centers = centroids_df.copy()
+centers = centers.groupby(["Cluster"])["Available Stands"].sum().reset_index()
+centers = centers.rename(columns={"Available Stands": "Sum Of Stands"})
+# CSV: 1649.796156, 4065.806215, 3160.653014, 2417.590592
+# CSV+JSON: 2389.773207, 3195.902534, 4135.218406, 1707.350748
+#print(centers)
+
+agg_df = df[["Number", "Name", "Time", "Available Stands"]].copy()
+agg_df = agg_df.groupby(["Number", "Name", "Time"])["Available Stands"].mean().reset_index()
+agg_df = agg_df.rename(columns={"Available Stands": "Stands"})
+agg_df["Cluster"] = "None"
+# Loop through each station and find the cluster which is closer to it
+for i in range(1, 103):
+    min_diff = centers.copy()
+    # Get the sum of stands for each station
+    min_diff["Station Sum"] = agg_df[agg_df["Number"] == i]["Stands"].sum()
+    min_diff["Diff"] = np.abs(min_diff["Sum Of Stands"] - min_diff["Station Sum"])
+    # cluster which has the minimum difference between sum of stands and available stands is the station cluster
+    min_diff = min_diff.sort_values(by=["Diff"]).reset_index(drop=True).head(1)
+    #print(min_diff)
+    agg_df.loc[agg_df["Number"] == i, "Cluster"] = min_diff["Cluster"].values[0]
+    #print(agg_df[agg_df["Number"] == i])
+Common.saveCSV(agg_df, Common.CLEAN_DATA_DIR + "/db_clustered_stations.csv")
+#print(agg_df)
 
 ###################################################################
 ############ PLOT THE DATA FOR CLUSTERING ALL STATIONS ############
@@ -136,7 +165,7 @@ print("Plotting K-Means of all stations during the week")
 # plot available bike stands based on cluster number
 fig, ax = plt.subplots(figsize=(8, 7))
 for label, cluster_df in centroids_df.groupby("Cluster"):
-    ax.plot(cluster_df["Time"], cluster_df["Available Bike Stands"], label=label)
+    ax.plot(cluster_df["Time"], cluster_df["Available Stands"], label=label)
 # locate sticks every 1 hour
 ax.xaxis.set_major_locator(mdates.HourLocator(interval = 1))
 # show locate label with hour and minute format
@@ -144,7 +173,7 @@ ax.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M"))
 # show rotate tick lables automatically with 30 degree, it would show 90 degree if we don't call it
 fig.autofmt_xdate()
 # set title, xlable and ylabel of the figure
-ax.set(title="Clustering for all stations", xlabel="Hour of day", ylabel="Available Bike Stands")
+ax.set(title="Clustering for all stations", xlabel="Hour of day", ylabel="Available Stands")
 # set location of legend
 ax.legend(title="Cluster", bbox_to_anchor=(1.02, 0.65), loc=2, borderaxespad=0.)
 # show grid
@@ -162,7 +191,7 @@ fig.clear()
 ###################################################################
 weekdays = pd.Series(np.array(["Mon", "Tue", "Wed", "Thu", "Fri"]))
 #################### WEEKDAYS ###################
-weekday_df = df[df["Weekday"].isin(weekdays)][["Number", "Date", "Time", "Available Bike Stands"]]
+weekday_df = df[df["Weekday"].isin(weekdays)][["Number", "Date", "Time", "Available Stands"]]
 # spread the data
 weekday_df = spread_data_by_time(weekday_df)
 # row counts = 10771, wss = [230530144.25717294, 145539618.7550903, 113843491.11600238, 95199552.71731418, 87781998.91295272, 81464846.73866414, 76266754.45641534, 71781659.30167598, 68189449.59577079, 65251957.952212185, 63045303.854908444, 61009697.83267804, 59363827.75259201, 57647244.66527195]
@@ -181,7 +210,7 @@ print("Plotting K-Means of all stations during weekdays")
 # plot available bike stands based on cluster number
 fig, ax = plt.subplots(figsize=(8, 7))
 for label, cluster_df in centroids_df.groupby("Cluster"):
-    ax.plot(cluster_df["Time"], cluster_df["Available Bike Stands"], label=label)
+    ax.plot(cluster_df["Time"], cluster_df["Available Stands"], label=label)
 # locate sticks every 1 hour
 ax.xaxis.set_major_locator(mdates.HourLocator(interval = 1))
 # show locate label with hour and minute format
@@ -189,7 +218,7 @@ ax.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M"))
 # show rotate tick lables automatically with 30 degree, it would show 90 degree if we don't call it
 fig.autofmt_xdate()
 # set title, xlable and ylabel of the figure
-ax.set(title="Weekdays Clustering (Mon - Fri)", xlabel="Hour of day", ylabel="Available Bike Stands")
+ax.set(title="Weekdays Clustering (Mon - Fri)", xlabel="Hour of day", ylabel="Available Stands")
 # set location of legend
 ax.legend(title="Cluster", bbox_to_anchor=(1.02, 0.65), loc=2, borderaxespad=0.)
 # show grid
@@ -203,7 +232,7 @@ fig.savefig(Common.CLUSTERING_PLOTS_DIR + "/clustering_weekdays.png")
 fig.clear()
 
 #################### WEEKENDS ###################
-weekend_df = df[~df["Weekday"].isin(weekdays)][["Number", "Date", "Time", "Available Bike Stands"]]
+weekend_df = df[~df["Weekday"].isin(weekdays)][["Number", "Date", "Time", "Available Stands"]]
 # spread the data
 weekend_df = spread_data_by_time(weekend_df)
 # row counts = 8148, wss = [230530144.25717294, 145539618.7550903, 113843491.11600238, 95199552.71731418, 87781998.91295272, 81464846.73866414, 76266754.45641534, 71781659.30167598, 68189449.59577079, 65251957.952212185, 63045303.854908444, 61009697.83267804, 59363827.75259201, 57647244.66527195]
@@ -222,7 +251,7 @@ print("Plotting K-Means of all stations during weekends")
 # plot available bike stands based on cluster number
 fig, ax = plt.subplots(figsize=(8, 7))
 for label, cluster_df in centroids_df.groupby("Cluster"):
-    ax.plot(cluster_df["Time"], cluster_df["Available Bike Stands"], label=label)
+    ax.plot(cluster_df["Time"], cluster_df["Available Stands"], label=label)
 # locate sticks every 1 hour
 ax.xaxis.set_major_locator(mdates.HourLocator(interval = 1))
 # show locate label with hour and minute format
@@ -230,7 +259,7 @@ ax.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M"))
 # show rotate tick lables automatically with 30 degree, it would show 90 degree if we don't call it
 fig.autofmt_xdate()
 # set title, xlable and ylabel of the figure
-ax.set(title="Weekends Clustering (Sat - Sun)", xlabel="Hour of day", ylabel="Available Bike Stands")
+ax.set(title="Weekends Clustering (Sat - Sun)", xlabel="Hour of day", ylabel="Available Stands")
 # set location of legend
 ax.legend(title="Cluster", bbox_to_anchor=(1.02, 0.65), loc=2, borderaxespad=0.)
 # show grid
@@ -242,33 +271,6 @@ plt.subplots_adjust(left=0.09, right=0.85, top=0.95, bottom=0.1)
 # save the plot to file
 fig.savefig(Common.CLUSTERING_PLOTS_DIR + "/clustering_weekends.png")
 fig.clear()
-
-##############################################################################
-######### FIND THE SUITABLE CLUSTER NUMBER BELONGS TO EACH STATION ###########
-##############################################################################
-centers = fit_data_using_kmeans(prep_df, Common.CLUSTERING_NUMBER, time_lvls)
-centers = centers.groupby(["Cluster"])["Available Bike Stands"].sum().reset_index() # 1649.796156, 4065.806215, 3160.653014, 2417.590592
-centers = centers.rename(columns={"Available Bike Stands": "Sum Of Stands"})
-
-agg_df = df[["Number", "Name", "Time", "Available Bike Stands"]].copy()
-agg_df = agg_df.groupby(["Number", "Name", "Time"])["Available Bike Stands"].mean().reset_index()
-agg_df = agg_df.rename(columns={"Available Bike Stands": "Stands"})
-agg_df["Cluster"] = "None"
-
-# Loop through each station and find the cluster which is closer to it
-for i in range(1, 103):
-    # Get the sum of stands for each station
-    sum_stands = agg_df[agg_df["Number"] == i]["Stands"].sum()
-
-    min_diff = centers.copy()
-    min_diff["Station Sum"] = sum_stands
-    min_diff["Diff"] = np.abs(min_diff["Sum Of Stands"] - min_diff["Station Sum"])
-    min_diff = min_diff.sort_values(by=["Diff"]).reset_index(drop=True).head(1)
-
-    agg_df.loc[agg_df["Number"] == i, "Cluster"] = min_diff["Cluster"].values[0]
-
-Common.goToSubDirectory(Common.CLEAN_DATA_DIR)
-Common.saveCSV(agg_df, "./db_clustered_stations.csv")
 
 end = time.time()
 print("Done exploration after {} seconds".format((end - start)))

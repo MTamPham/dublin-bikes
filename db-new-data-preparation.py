@@ -1,7 +1,7 @@
 '''
     Author: Tam M Pham
     Created date: 05/02/2019
-    Modified date: 05/02/2019
+    Modified date: 23/03/2019
     Description:
         Read raw data from multile CSV files, then pre-processing the data 
         and finally store the data to file to re-use the data for exploring
@@ -131,7 +131,7 @@ df = df.reset_index(drop=True)
 df["last_update"] = pd.to_datetime(df["last_update"], unit='ms', utc=True)
 
 # handle datetime and weekday in dataframe
-df["date"] = df["last_update"].dt.strftime('%Y-%m-%d')
+df["date"] = df["last_update"].dt.strftime(Common.DATE_FORMAT)
 df["time"] = df["last_update"].apply(lambda x: "%s:%s:00" % (x.strftime('%H'), Common.refineMinute(x.minute)))
 df["weekday"] = df["last_update"].dt.strftime("%a")
 
@@ -164,12 +164,12 @@ df = df.groupby(["number", "name", "address", "date", "time", "weekday"]).agg({"
         "diff": "sum", "available_bike_stands": "last", "check_in": "sum", "check_out": "sum"}).reset_index()
 
 # rename columns
-df = df.rename(columns={"number": "Number", "name": "Name", "address": "Address", "date": "Date", "time": "Time", "weekday": "Weekday", "bike_stands": "Bike Stands", "diff": "Diff", "available_bike_stands": "Available Bike Stands", "check_in": "Check In", "check_out": "Check Out"})
+df = df.rename(columns={"number": "Number", "name": "Name", "address": "Address", "date": "Date", "time": "Time", "weekday": "Weekday", "bike_stands": "Bike Stands", "diff": "Diff", "available_bike_stands": "Available Stands", "check_in": "Check In", "check_out": "Check Out"})
 
 ###############################################################
 ############### SAVE PREPROCESSING DATA TO FILE ###############
 ###############################################################
-path = os.path.join(working_dir, Common.CLEAN_DATA_DIR + "/db_new_data.csv")
+path = Common.CLEAN_DATA_FILE_FULL_PATH
 print(f"Saving data to CSV file to {path}")
 Common.saveCSV(df, path)
 #print(df)
