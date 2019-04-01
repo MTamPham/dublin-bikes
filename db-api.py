@@ -9,8 +9,10 @@
 from flask import Flask, request
 from flask import jsonify
 from common import Common
+from flask_cors import CORS
 
 app = Flask(__name__)
+CORS(app, resources={r"/api/*": {"origins": "*"}})
 
 @app.route('/api/search', methods=['GET'])
 def search():
@@ -34,20 +36,23 @@ def search():
     try:
         if (minutes > 0):
             print("Calling predict() with station and minutes")
-            pred, old_bike_stands, curr_bike_stands = Common.predict(station, minutes)
+            pred, old_bike_stands, curr_bike_stands, last_update = Common.predict(station, minutes)
         else:
             print("Calling predict() with station only")
-            pred, old_bike_stands, curr_bike_stands = Common.predict(station)
+            pred, old_bike_stands, curr_bike_stands, last_update = Common.predict(station)
         data = {
             "available_bikes": int(curr_bike_stands) - int(pred),\
             "available_bike_stands": int(pred),\
             "old_bike_stands": int(old_bike_stands), \
-            "curr_bike_stands": int(curr_bike_stands) 
+            "curr_bike_stands": int(curr_bike_stands), \
+            "last_update": str(last_update)
         }
         status_code = 200
-    except:
+    except Exception as e:
         status_code = 500
+        data = { "error" : e }
     result = {"status": status_code, "data": data}
+    print(result)
     return jsonify(result)
 
 if __name__ == '__main__':

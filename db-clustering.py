@@ -19,7 +19,8 @@ import matplotlib.ticker as ticker
 import sys
 
 start = time.time()
-print("Please be patient, it might take a while...")
+
+Common.create_folder(Common.CLUSTERING_PLOTS_DIR)
 
 def fill_na(df):
     # iterate through rows
@@ -108,9 +109,6 @@ prep_df = spread_data_by_time(prep_df)
 # the time levels is used for reshaping the data
 time_lvls = df[["Time"]].drop_duplicates(keep='first').sort_values(by=["Time"]).reset_index(drop=True)["Time"]
 
-# create clustering plot folder if it isn't existing
-Common.createFolder(Common.CLUSTERING_PLOTS_DIR)
-
 ######################################################################
 ######## FIND THE IDEAL NUMBER OF CLUSTER USING ELBOW METHOD #########
 ######################################################################
@@ -155,7 +153,7 @@ for i in range(1, 103):
     #print(min_diff)
     agg_df.loc[agg_df["Number"] == i, "Cluster"] = min_diff["Cluster"].values[0]
     #print(agg_df[agg_df["Number"] == i])
-Common.saveCSV(agg_df, Common.CLEAN_DATA_DIR + "/db_clustered_stations.csv")
+Common.save_csv(agg_df, Common.CLEAN_DATA_DIR + "/db_clustered_stations.csv")
 #print(agg_df)
 
 ###################################################################

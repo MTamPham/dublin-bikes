@@ -1,7 +1,7 @@
 '''
     Author: Tam M Pham
     Created date: 18/03/2019
-    Modified date: 18/03/2019
+    Modified date: 28/03/2019
     Description:
         Scattering predict available bike stand values 
         and actual available bike stand values
@@ -14,7 +14,6 @@ import time
 from common import Common
 import sys
 import math
-import threading
 import fnmatch
 import re
 import matplotlib.pyplot as plt
@@ -24,6 +23,9 @@ from sklearn import preprocessing   # label encoder
 from sklearn.metrics import mean_squared_error      # calculate MSE
 
 start = time.time()
+
+Common.create_folder(Common.EVALUATION_PLOTS_DIR)
+Common.create_folder(Common.UNSEEN_PREDICTING_PLOTS_DIR)
 
 def setBikeStands(number):
     if (number == 79):
@@ -51,22 +53,22 @@ working_dir = os.getcwd()
 model = joblib.load(Common.GRADIENT_BOOSTING_MODEL_FULL_PATH)
 
 # get clusters dataframe
-clusters = Common.getDataFrameFromFile(Common.CLUSTERED_DATA_FILE_FULL_PATH, True)
+clusters = Common.get_dataframe_from_file(Common.CLUSTERED_DATA_FILE_FULL_PATH, True)
 
 # read CSV file containing weather info
-weather = Common.getDataFrameFromFile("./weather-data/M2_weather.csv", True)
+weather = Common.get_dataframe_from_file("./weather-data/M2_weather.csv", True)
 weather = weather.drop_duplicates(subset=["station_id", "datetime", "AtmosphericPressure", "WindSpeed", "AirTemperature"], keep='first')
 weather["datetime"] = pd.to_datetime(weather["datetime"], format="%m/%d/%Y %H:%M")
 weather["Date"] = weather["datetime"].dt.strftime(Common.DATE_FORMAT)
 weather["Time"] = weather["datetime"].dt.strftime(Common.TIME_FORMAT)
 
 # read CSV file containing geographical info
-geo = Common.getDataFrameFromFile("./geo-data/db-geo.csv", True)
+geo = Common.get_dataframe_from_file("./geo-data/db-geo.csv", True)
 
 ######################################################################
 ############################## UNSEEN DATA ###########################
 ######################################################################
-unseen_all_df = Common.getDataFrameFromFile(Common.CLEAN_DATA_FILE_FULL_PATH, True)
+unseen_all_df = Common.get_dataframe_from_file(Common.CLEAN_DATA_FILE_FULL_PATH, True)
 unseen_all_df = unseen_all_df[(unseen_all_df["Date"] >= "2017-11-06") & (unseen_all_df["Date"] <= "2017-11-13")].reset_index(drop=True)
 if len(unseen_all_df) <= 0:
     print("There is no data after 2017-11-06")
@@ -84,8 +86,8 @@ unseen_merged_df = pd.merge(unseen_all_df
 unseen_time_df = unseen_merged_df.copy()
 
 # group time into 48 factors
-unseen_time_df["Time"] = unseen_time_df["Time"].apply(lambda x: Common.refineTime(x))
-unseen_time_df["Season"] = unseen_time_df["Date"].apply(lambda x: Common.defineSeason(x))
+unseen_time_df["Time"] = unseen_time_df["Time"].apply(lambda x: Common.refine_time(x))
+unseen_time_df["Season"] = unseen_time_df["Date"].apply(lambda x: Common.define_season(x))
 unseen_time_df[Common.PREDICTING_FACTOR] = unseen_time_df["Available Stands"]
 unseen_time_df = unseen_time_df.groupby(["Number", "Name", "Address", "Date", "Time", "Bike Stands", "Weekday", "Season"]).agg({Common.PREDICTING_FACTOR: "mean", "Cluster": "first"}).reset_index()
 unseen_time_df[Common.PREDICTING_FACTOR] = unseen_time_df[Common.PREDICTING_FACTOR].round(0)
@@ -116,6 +118,9 @@ le_season = preprocessing.LabelEncoder()
 unseen_gb_df["Season Code"] = le_season.fit_transform(unseen_gb_df["Season"])
 le_time = preprocessing.LabelEncoder()
 unseen_gb_df["Time Code"] = le_time.fit_transform(unseen_gb_df["Time"])
+
+# ignore data from 00:00:00 to 05:30:00 since Dublin Bikes system doesn't operate in that time period
+unseen_gb_df = unseen_gb_df[(unseen_gb_df["Time"] >= "05:30:00")].reset_index(drop=True)
 # convert time string to time to plot data
 unseen_gb_df["Time"] = pd.to_datetime(unseen_gb_df["Time"], format="%H:%M:%S")
 
@@ -133,6 +138,9 @@ model = joblib.load(Common.GRADIENT_BOOSTING_MODEL_FULL_PATH)
 ##################################################################
 # add predicted result into unseen dataset
 unseen_gb_df["pred"] = model.predict(unseen_gb_df[Common.IMPORTANT_FACTORS]).round(0).astype(np.int64)
+unseen_gb_df["diff"] = abs(unseen_gb_df[Common.PREDICTING_FACTOR] - unseen_gb_df["pred"])
+
+Common.save_csv(unseen_gb_df, "./unseen_gb_df.csv")
 
 mse = mean_squared_error(unseen_gb_df[Common.PREDICTING_FACTOR], unseen_gb_df["pred"])
 rmse = math.sqrt(mse)
@@ -142,7 +150,7 @@ print("RMSE: %.4f" % rmse)
 unseen_gb_df = unseen_gb_df.groupby(["Number", "Address", "Time", "Weekday"]).agg({Common.PREDICTING_FACTOR: "mean", "pred": "mean", "Bike Stands": "max"}).reset_index()
 unseen_gb_df[Common.PREDICTING_FACTOR] = unseen_gb_df[Common.PREDICTING_FACTOR].round(0).astype(np.int64)
 unseen_gb_df["pred"] = unseen_gb_df["pred"].round(0).astype(np.int64)
-#Common.saveCSV(unseen_gb_df, "./unseen_gb_df.csv")
+#Common.save_csv(unseen_gb_df, "./unseen_gb_df.csv")
 # plot by weekdays
 n_wdays = len(Common.SHORT_WEEKDAY_ORDER)
 n_wday_row = round(n_wdays / Common.MAX_AXES_ROW)
@@ -266,7 +274,7 @@ df["Actual Time"] = pd.to_datetime(df["Actual Time"], unit='s')
 
 # handle datetime
 df["Date"] = df["Actual Time"].dt.strftime(Common.DATE_FORMAT)
-df["Time"] = df["Actual Time"].apply(lambda x: "%s:%s:00" % (x.strftime('%H'), Common.refineMinute(x.minute)))
+df["Time"] = df["Actual Time"].apply(lambda x: "%s:%s:00" % (x.strftime('%H'), Common.refine_minute(x.minute)))
 
 # leave out data from 12:30 am to 05:30 am
 df = df[(df["Time"] >= "05:30:00")].reset_index()
@@ -288,6 +296,7 @@ total_cases = len(df)
 correct_ratio = (correct_cases / total_cases) * 100
 print(f"Correct {correct_cases}/{total_cases} = {correct_ratio}%")
 #print(df[["Number", "Time", "Pred Stands", "Actual Stands", "Predict Sufficiency"]])
+
 
 # handle data for plotting
 df = df[["Number", "Time", "Actual Stands", "Pred Stands", "Bike Stands"]]
@@ -378,7 +387,7 @@ df["Actual Time"] = pd.to_datetime(df["Actual Time"], unit='s')
 
 # handle datetime
 df["Date"] = df["Actual Time"].dt.strftime(Common.DATE_FORMAT)
-df["Time"] = df["Actual Time"].apply(lambda x: "%s:%s:00" % (x.strftime('%H'), Common.refineMinute(x.minute)))
+df["Time"] = df["Actual Time"].apply(lambda x: "%s:%s:00" % (x.strftime('%H'), Common.refine_minute(x.minute)))
 
 # leave out data from 12:30 am to 05:30 am
 df = df[(df["Time"] >= "05:30:00")].reset_index()

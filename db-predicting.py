@@ -12,5 +12,5 @@ else:
     if len(sys.argv) == 3:
         minutes = int(sys.argv[2])
 
-pred, old_bike_stands, curr_bike_stands = Common.predict(station, minutes)
-print(f"{pred}, {old_bike_stands}, {curr_bike_stands}")
+pred, old_bike_stands, curr_bike_stands, last_update = Common.predict(station, minutes)
+print(f"{pred}, {old_bike_stands}, {curr_bike_stands}, {last_update}")

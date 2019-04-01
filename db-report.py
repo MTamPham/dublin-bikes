@@ -45,7 +45,7 @@ def collect():
 def predict():
     now = round(time.time())
     now_str = time.strftime(Common.REPORT_FILE_NAME_FORMAT, time.localtime(now))
-    Common.createFolder("report")
+    Common.create_folder("report")
     with open(FILE_NAME_FORMAT.format(now_str), "w") as f:
         text = "Number,Time,Pred Available Bike Stands,Pred Bikes,Actual Time,Actual Available Bike Stands,Actual Bikes\n"
         

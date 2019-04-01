@@ -15,6 +15,7 @@ from sklearn.externals import joblib    # for saving and loading model
 from sklearn import preprocessing   # label encoder
 import requests
 import numpy as np
+import sys
 
 class Common:
     CLEAN_DATA_DIR = "./saved-data"
@@ -25,6 +26,7 @@ class Common:
     PLOTS_DIR = "./plots"
     CLUSTERING_PLOTS_DIR = "./plots/clustering"
     PREDICTING_PLOTS_DIR = "./plots/predicting"
+    UNSEEN_PREDICTING_PLOTS_DIR = "./plots/predicting/unseen"
     EVALUATION_PLOTS_DIR = "./plots/evaluation"
     SHORT_WEEKDAY_ORDER = ['Mon','Tue','Wed','Thu','Fri','Sat', 'Sun']
     CLUSTERING_NUMBER = 4
@@ -40,7 +42,7 @@ class Common:
     EVALUATION_STATIONS = [79, 5, 100, 66, 33]
 
     @staticmethod
-    def refineMinute(min):
+    def refine_minute(min):
         if min < 10: return "00"
         elif min < 20: return "10"
         elif min < 30: return "20"
@@ -51,14 +53,14 @@ class Common:
             return np.nan
 
     @staticmethod
-    def refineTime(string):
+    def refine_time(string):
         time = pd.to_datetime(string, format="%H:%M:%S")
         hour = time.strftime('%H')
         minute = "00" if time.minute < 30 else "30"
         return "%s:%s:00" % (hour, minute)
 
     @staticmethod
-    def defineSeason(string):
+    def define_season(string):
         date = pd.to_datetime(string, format="%Y-%m-%d")
         month = date.month
         
@@ -72,7 +74,7 @@ class Common:
             return "Autumn"
 
     @staticmethod
-    def getDataFrameFromFile(path, notParseDate=False):
+    def get_dataframe_from_file(path, notParseDate=False):
         # get the relative path of preparation data file
         rel_path = os.path.relpath(path)
         # read CSV files using Pandas
@@ -83,7 +85,7 @@ class Common:
         return df
 
     @staticmethod
-    def createFolder(directory):
+    def create_folder(directory):
         try:
             if not os.path.exists(directory):
                 os.makedirs(directory)
@@ -104,20 +106,20 @@ class Common:
             return os.path.isdir(name)
 
     @staticmethod
-    def getWorkingDirectory():
+    def get_working_directory():
         return os.getcwd()
 
     @staticmethod
-    def goToSubDirectory(subDirectory):
-        new_dir = os.path.join(Common.getWorkingDirectory(), subDirectory)
+    def go_to_sub_directory(subDirectory):
+        new_dir = os.path.join(Common.get_working_directory(), subDirectory)
         os.chdir(new_dir)
 
     @staticmethod
-    def saveCSV(df, filePath):
+    def save_csv(df, filePath):
         df.to_csv(filePath, sep=",", encoding='utf-8', index=False)
 
     @staticmethod
-    def deleteFile(path):
+    def delete_file(path):
         if os.path.exists(path):
             os.remove(path)
 
@@ -127,8 +129,8 @@ class Common:
 
     @staticmethod
     def predict(station_number, next_minutes=0):
+        #print(f"Executing predict() with {station_number}({type(station_number)}) and {next_minutes}({type(next_minutes)})")
         station_number = int(station_number)
-        #print(f"Station: {station_number} {type(station_number)}, minutes: {next_minutes} {type(next_minutes)}")
         next_hour = round(float(int(next_minutes) / 60), 2)
 
         # load Gradient Boosting model
@@ -136,20 +138,25 @@ class Common:
 
         now = dt.now() + timedelta(hours=next_hour)
         hour = now.strftime("%H")
-        minute = Common.refineMinute(int(now.strftime("%M")))
-        time = Common.refineTime(f"{hour}:{minute}:00")
+        minute = Common.refine_minute(int(now.strftime("%M")))
+        time = Common.refine_time(f"{hour}:{minute}:00")
         weekday = now.strftime("%a")
-        season = Common.defineSeason(now.strftime(Common.DATE_FORMAT))
-        #print(type(station_number))
+        season = Common.define_season(now.strftime(Common.DATE_FORMAT))
 
         # get clusters dataframe
-        clusters = Common.getDataFrameFromFile(Common.CLUSTERED_DATA_FILE_FULL_PATH, True)
+        clusters = Common.get_dataframe_from_file(Common.CLUSTERED_DATA_FILE_FULL_PATH, True)
 
         # get all data dataframe
-        all_df = Common.getDataFrameFromFile(Common.CLEAN_DATA_FILE_FULL_PATH, True)
+        all_df = Common.get_dataframe_from_file(Common.CLEAN_DATA_FILE_FULL_PATH, True)
 
         # get info of passing station number
         filter_df = all_df[(all_df["Number"] == station_number)].copy().reset_index(drop=True)
+        index = len(filter_df) - 1        
+        saved_last_update = filter_df.loc[index, "Date"] + " " + filter_df.loc[index, "Time"]
+
+        if (next_minutes == 0):
+            bike_stands, available_stands, available_bikes, lat, lng, last_update = Common.retrieve_jcdecaux(station_number)
+            return available_stands, filter_df["Bike Stands"].values[0], bike_stands, last_update
 
         # left merge these two dataframes together based on Number, Date and Time
         filter_df = pd.merge(filter_df
@@ -158,8 +165,8 @@ class Common:
                             , how="left")
 
         # group time into 48 factors
-        filter_df["Time"] = filter_df["Time"].apply(lambda x: Common.refineTime(x))
-        filter_df["Season"] = filter_df["Date"].apply(lambda x: Common.defineSeason(x))
+        filter_df["Time"] = filter_df["Time"].apply(lambda x: Common.refine_time(x))
+        filter_df["Season"] = filter_df["Date"].apply(lambda x: Common.define_season(x))
         filter_df[Common.PREDICTING_FACTOR] = filter_df["Available Stands"]
         filter_df = filter_df.groupby(["Number", "Name", "Address", "Date", "Time", "Bike Stands", "Weekday", "Season"]).agg({Common.PREDICTING_FACTOR: "mean", "Cluster": "first"}).reset_index()
         filter_df[Common.PREDICTING_FACTOR] = filter_df[Common.PREDICTING_FACTOR].round(0)
@@ -174,7 +181,7 @@ class Common:
         filter_df[Common.PREVIOUS_PREDICTING_FACTOR] = filter_df[Common.PREVIOUS_PREDICTING_FACTOR].astype(np.int64)
 
         # read CSV file containing geographical info
-        geo = Common.getDataFrameFromFile("./geo-data/db-geo.csv", True)
+        geo = Common.get_dataframe_from_file("./geo-data/db-geo.csv", True)
         filter_df = pd.merge(filter_df
                             , geo[["Number", "Latitude", "Longitude"]]
                             , on=["Number"]
@@ -195,31 +202,38 @@ class Common:
         filter_df[Common.PREDICTING_FACTOR] = filter_df[Common.PREDICTING_FACTOR].round(0).astype(np.int64)
         filter_df[Common.PREVIOUS_PREDICTING_FACTOR] = filter_df[Common.PREVIOUS_PREDICTING_FACTOR].round(0).astype(np.int64)
 
-        # get latitude, longitude of finding station
-        lat = 0
-        lng = 0
-        response = requests.get("https://api.jcdecaux.com/vls/v1/stations?contract=dublin&apiKey=172c8bcf7be48ceb4ac1aee732500142d2b3651a")
-        if response.status_code == 200:
-            jcdecaux = response.json()
-            for i in range(1, len(jcdecaux)):
-                #print(jcdecaux[i]["number"])
-                if jcdecaux[i]["number"] == station_number:
-                    lat = jcdecaux[i]["position"]["lat"]
-                    lng = jcdecaux[i]["position"]["lng"]
-                    filter_df["Latitude"] = lat
-                    filter_df["Longitude"] = lng
-                    #filter_df["Prev Bikes"] = jcdecaux[i]["bike_stands"] - jcdecaux[i]["available_bike_stands"]
-                    filter_df[Common.PREVIOUS_PREDICTING_FACTOR] = jcdecaux[i]["available_bike_stands"]
-                    filter_df["Current Bike Stands"] = jcdecaux[i]["bike_stands"]
+        #print(filter_df)
+        #print(filter_df.dtypes)
+        
+        bike_stands, available_stands, available_bikes, lat, lng, last_update = Common.retrieve_jcdecaux(station_number)
+        if (bike_stands == 0 and available_stands == 0) :
+            filter_df["last_update"] = saved_last_update
+            filter_df["Current Bike Stands"] = filter_df["Bike Stands"]
         else:
-            lat = filter_df["Latitude"].values
-            lng = filter_df["Longitude"].values
+            filter_df["Latitude"] = lat
+            filter_df["Longitude"] = lng
+            #filter_df["Prev Bikes"] = available_bikes
+            filter_df[Common.PREVIOUS_PREDICTING_FACTOR] = available_stands
+            filter_df["Current Bike Stands"] = bike_stands
+            filter_df["last_update"] = pd.to_datetime(last_update, unit='ms', utc=True)
 
         pred = model.predict(filter_df[Common.IMPORTANT_FACTORS]).round(0).astype(np.int64)[0]
         old_bike_stands = filter_df["Bike Stands"].values[0]
         curr_bike_stands = filter_df["Current Bike Stands"].values[0]
+        last_update = filter_df["last_update"].values[0]
 
-        #print(filter_df[["Name", "Bike Stands", "Current Bike Stands"]])
+        #print(filter_df)
         #print(filter_df.dtypes)
 
-        return pred, old_bike_stands, curr_bike_stands
+        return pred, old_bike_stands, curr_bike_stands, last_update
+
+    @staticmethod
+    def retrieve_jcdecaux(station_number):
+        print("Calling JCDecaux API")
+        response = requests.get(f"https://api.jcdecaux.com/vls/v1/stations/{station_number}?contract=dublin&apiKey=172c8bcf7be48ceb4ac1aee732500142d2b3651a")
+        if response.status_code == 200:
+            station = response.json()
+            return station["bike_stands"], station["available_bike_stands"], station["available_bikes"], \
+                    station["position"]["lat"], station["position"]["lng"], station["last_update"]
+        else:
+            return 0, 0, 0, 0, 0, 0

@@ -1,7 +1,7 @@
 '''
     Author: Tam M Pham
     Created date: 13/02/2019
-    Modified date: 13/02/2019
+    Modified date: 28/03/2019
     Description:
         Using Gradient Boosting algorithm for bike prediction
 '''
@@ -21,13 +21,14 @@ from sklearn.externals import joblib    # for saving and loading model
 import sys
 
 start = time.time()
-print("Please be patient, it might take a while...")
+
+Common.create_folder(Common.PREDICTING_PLOTS_DIR)
     
 # get clusters dataframe
-clusters = Common.getDataFrameFromFile(Common.CLUSTERED_DATA_FILE_FULL_PATH, True)
+clusters = Common.get_dataframe_from_file(Common.CLUSTERED_DATA_FILE_FULL_PATH, True)
 
 # get all data dataframe
-all_df = Common.getDataFrameFromFile(Common.CLEAN_DATA_FILE_FULL_PATH, True)
+all_df = Common.get_dataframe_from_file(Common.CLEAN_DATA_FILE_FULL_PATH, True)
 all_df = all_df[(all_df["Date"] >= "2016-10-14") & (all_df["Date"] <= "2017-10-14")].reset_index(drop=True)
 
 # left merge these two dataframes together based on Number, Date and Time
@@ -68,8 +69,8 @@ print("Stations selected randomly is ", selected)
 time_df = merged_df[merged_df["Number"].isin(selected)].copy()
 
 # group time into 48 factors
-time_df["Time"] = time_df["Time"].apply(lambda x: Common.refineTime(x))
-time_df["Season"] = time_df["Date"].apply(lambda x: Common.defineSeason(x))
+time_df["Time"] = time_df["Time"].apply(lambda x: Common.refine_time(x))
+time_df["Season"] = time_df["Date"].apply(lambda x: Common.define_season(x))
 time_df[Common.PREDICTING_FACTOR] = time_df["Available Stands"]
 time_df = time_df.groupby(["Number", "Name", "Address", "Date", "Time", "Bike Stands", "Weekday", "Season"]).agg({Common.PREDICTING_FACTOR: "mean", "Cluster": "first"}).reset_index()
 time_df[Common.PREVIOUS_PREDICTING_FACTOR] = time_df.groupby(["Number", "Name", "Address", "Date"])[Common.PREDICTING_FACTOR].shift(1)
@@ -82,14 +83,14 @@ time_df[Common.PREDICTING_FACTOR] = time_df[Common.PREDICTING_FACTOR].astype(np.
 time_df[Common.PREVIOUS_PREDICTING_FACTOR] = time_df[Common.PREVIOUS_PREDICTING_FACTOR].astype(np.int64)
 
 # read CSV file containing geographical info
-geo = Common.getDataFrameFromFile("./geo-data/db-geo.csv", True)
+geo = Common.get_dataframe_from_file("./geo-data/db-geo.csv", True)
 gb_df = pd.merge(time_df
                     , geo[["Number", "Latitude", "Longitude"]]
                     , on=["Number"]
                     , how="left")
 
 # read CSV file containing weather info
-weather = Common.getDataFrameFromFile("./weather-data/M2_weather.csv", True)
+weather = Common.get_dataframe_from_file("./weather-data/M2_weather.csv", True)
 weather = weather.drop_duplicates(subset=["station_id", "datetime", "AtmosphericPressure", "WindSpeed", "AirTemperature"], keep='first')
 weather["datetime"] = pd.to_datetime(weather["datetime"], format="%m/%d/%Y %H:%M")
 weather["Date"] = weather["datetime"].dt.strftime(Common.DATE_FORMAT)
@@ -109,7 +110,7 @@ le_season = preprocessing.LabelEncoder()
 gb_df["Season Code"] = le_season.fit_transform(gb_df["Season"])
 le_time = preprocessing.LabelEncoder()
 gb_df["Time Code"] = le_time.fit_transform(gb_df["Time"])
-#Common.saveCSV(gb_df, "./gb_df.csv")
+#Common.save_csv(gb_df, "./gb_df.csv")
 #print(f"Data has {len(gb_df)} rows")
 
 # read CSV file containing holiday info
@@ -190,6 +191,8 @@ n_station_row = round(n_stations / Common.MAX_AXES_ROW)
 n_station_row = n_station_row + 1 if n_station_row * Common.MAX_AXES_ROW < n_stations else n_station_row
 print(f"We need to generate a figure with {n_station_row} rows for {n_stations}")
 
+# ignore data from 00:00:00 to 05:30:00 since Dublin Bikes system doesn't operate in that time period
+df_test = df_test[(df_test["Time"] >= "05:30:00")].reset_index(drop=True)
 index = 0
 fig, axes = plt.subplots(figsize = (12, 10), nrows = n_station_row, ncols = Common.MAX_AXES_ROW, sharex = True, sharey= True, constrained_layout=False)
 for row in axes:
@@ -275,7 +278,7 @@ hr_unseen_gb_df["Station Range"] = "1-25" if hr_unseen_gb_df["Number"] < 26 \
                             else "76-102"
                             '''
 
-Common.saveCSV(hr_unseen_gb_df, "./hr_unseen_gb_df.csv")
+Common.save_csv(hr_unseen_gb_df, "./hr_unseen_gb_df.csv")
 #sys.exit()
 
 fig, ax = plt.subplots(figsize=(10, 6))

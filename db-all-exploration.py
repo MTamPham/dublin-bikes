@@ -17,7 +17,7 @@ import matplotlib.pyplot as plt
 
 start = time.time()
 
-print("Please be patient, it might take a while...")
+Common.create_folder(Common.PLOTS_DIR)
 
 # get the relative path of preparation data file
 rel_path = os.path.relpath(Common.CLEAN_DATA_FILE_FULL_PATH)

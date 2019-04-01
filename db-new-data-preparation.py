@@ -14,7 +14,6 @@ import pandas as pd
 import time
 from common import Common
 import sys
-import threading
 import fnmatch
 import re
 
@@ -35,6 +34,10 @@ start = time.time()
 #########################################################
 # get the current working directory
 working_dir = os.getcwd()
+
+Common.create_folder(f"{working_dir}/temp")
+Common.create_folder(Common.CLEAN_DATA_DIR)
+
 # change to raw-data directory to fetch JSON files
 data_dir = os.path.join(working_dir, "new-data")
 os.chdir(data_dir)
@@ -81,7 +84,7 @@ for date in file_dictionaries.keys():
         df = df.drop_duplicates(subset=["number", "last_update", "available_bike_stands"], keep='first')
         # re-index dataframe
         df = df.reset_index(drop=True)
-    Common.saveCSV(df, date_file)
+    Common.save_csv(df, date_file)
 
 # change to temp directory which contains combined CSV files of JSON files
 json_data_dir = os.path.join(working_dir, "temp")
@@ -132,7 +135,7 @@ df["last_update"] = pd.to_datetime(df["last_update"], unit='ms', utc=True)
 
 # handle datetime and weekday in dataframe
 df["date"] = df["last_update"].dt.strftime(Common.DATE_FORMAT)
-df["time"] = df["last_update"].apply(lambda x: "%s:%s:00" % (x.strftime('%H'), Common.refineMinute(x.minute)))
+df["time"] = df["last_update"].apply(lambda x: "%s:%s:00" % (x.strftime('%H'), Common.refine_minute(x.minute)))
 df["weekday"] = df["last_update"].dt.strftime("%a")
 
 # group by number and sort datetime in order
@@ -171,7 +174,7 @@ df = df.rename(columns={"number": "Number", "name": "Name", "address": "Address"
 ###############################################################
 path = Common.CLEAN_DATA_FILE_FULL_PATH
 print(f"Saving data to CSV file to {path}")
-Common.saveCSV(df, path)
+Common.save_csv(df, path)
 #print(df)
 
 end = time.time()

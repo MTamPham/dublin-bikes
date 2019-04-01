@@ -127,11 +127,11 @@ df = df.rename(columns={"number": "Number", "name": "Name", "address": "Address"
 ###############################################################
 print("Saving data to CSV file")
 # make the saved data preparation directory
-Common.createFolder(Common.CLEAN_DATA_DIR)
+Common.create_folder(Common.CLEAN_DATA_DIR)
 # delete db_all_data.csv file if it exists there
-Common.deleteFile(Common.CLEAN_DATA_FILE_FULL_PATH)
+Common.delete_file(Common.CLEAN_DATA_FILE_FULL_PATH)
 # save the data preparation for using later
-Common.saveCSV(df, Common.CLEAN_DATA_FILE_FULL_PATH)
+Common.save_csv(df, Common.CLEAN_DATA_FILE_FULL_PATH)
 
 # print result out
 #print(df)
