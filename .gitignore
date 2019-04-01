@@ -3,7 +3,9 @@
 
 # ignore specific folders
 /.ipynb_checkpoints
+/.idea
 /__pycache__
+/report
 /report30
 
 # ignore all CSV files
