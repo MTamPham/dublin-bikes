@@ -6,5 +6,6 @@ This is a web-based mobile application which make use of Gradient Boosting algor
 The station detail such as number, name, address, latitude, longitude are from Firebase Realtime Database
 
 ### Run the application
-$ npm install
-$ ionic serve
+> $ npm install
+
+> $ ionic serve
