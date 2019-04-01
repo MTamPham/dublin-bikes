@@ -1,0 +1,23 @@
+
+<ion-header>
+  <ion-navbar>
+    <ion-title>Dublin Bikes Forecast</ion-title>
+  </ion-navbar>
+</ion-header>
+
+<ion-content padding>
+    For having more information please select your search preference
+    
+    <button ion-button shape="round" (click)="goToDetailPage(0)" class="btn btn-primary btn-lg btn-block" aria-label="">
+        <span class="fa fa-trash-o fa-lg"></span>
+        Search By Number
+    </button>
+    <button ion-button shape="round" (click)="goToDetailPage(1)" class="btn btn-primary btn-lg btn-block" aria-label="">
+        <span class="fa fa-trash-o fa-lg"></span>
+        Search By Address
+    </button>
+    <button ion-button shape="round" (click)="goToGeoDetailPage()" class="btn btn-primary btn-lg btn-block" aria-label="">
+        <span class="fa fa-trash-o fa-lg"></span>
+        Search Near Me
+    </button>
+</ion-content>
