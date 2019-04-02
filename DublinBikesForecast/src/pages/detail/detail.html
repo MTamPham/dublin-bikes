@@ -1,0 +1,77 @@
+<!--
+  Generated template for the DetailPage page.
+
+  See http://ionicframework.com/docs/components/#navigation for more info on
+  Ionic pages and navigation.
+-->
+<ion-header>
+  <ion-navbar>
+    <ion-buttons left>
+        <button *ngIf="navigateFromGeoLocationPage == false" ion-button icon-only (click)="goToHome()">
+            <ion-icon name="arrow-back"></ion-icon>
+        </button>
+
+        <button *ngIf="navigateFromGeoLocationPage == true" ion-button icon-only (click)="goToGeoDetail()">
+            <ion-icon name="arrow-back"></ion-icon>
+        </button>
+    </ion-buttons>
+    <ion-title>Dublin Bikes Forecast</ion-title>
+  </ion-navbar>
+</ion-header>
+
+<ion-content padding>
+  <ion-toolbar>
+    <ion-searchbar show-cancel-button="true" type="search" placeholder="{{placeholder}}" (ionClear)="onClear($event)" (keyup)="search($event.target.value)"></ion-searchbar>
+  </ion-toolbar>
+  <ion-item>
+    <ion-label>Period of time</ion-label>
+    <ion-select (ionChange)="changePeriod($event)">
+        <ion-option *ngFor="let period of periodList" value="{{period.value}}" [selected]="period.value == '0'">{{period.name}}</ion-option>    
+    </ion-select>
+  </ion-item>
+
+  <!--
+  <ion-card *ngFor="let station of stationList" (click)="predict(station)">
+      <div class="card-title">Station {{station.number}}</div>
+      <div class="card-subtitle">{{station.name | titlecase}}</div>
+      <div *ngIf="station.availableBikes >=0 && station.availableStands >= 0 && station.bikeStands >= 0">
+        <ion-grid>
+          <ion-row>
+            <ion-col>Available bikes</ion-col>
+            <ion-col>{{station.availableBikes}}</ion-col>
+          </ion-row>
+          <ion-row>
+            <ion-col>Available Stands</ion-col>
+            <ion-col>{{station.availableStands}}</ion-col>
+          </ion-row>
+          <ion-row>
+            <ion-col>Station Stands</ion-col>
+            <ion-col>{{station.bikeStands}}</ion-col>
+          </ion-row>
+        </ion-grid>
+      </div>
+  </ion-card>-->
+
+  <ion-card *ngFor="let station of stationList$ | async" (click)="predict(station)">
+    <ng-template [ngIf]="station.open == true">
+      <div class="card-title">Station {{station.number}}</div>
+      <div class="card-subtitle">{{station.name | titlecase}}</div>
+      <div *ngIf="station.availableBikes >= 0 && station.availableStands >= 0 && station.bikeStands >= 0">
+        <ion-grid>
+          <ion-row>
+            <ion-col>Available bikes</ion-col>
+            <ion-col>{{station.availableBikes}}</ion-col>
+          </ion-row>
+          <ion-row>
+            <ion-col>Free stands</ion-col>
+            <ion-col>{{station.availableStands}}</ion-col>
+          </ion-row>
+          <ion-row>
+            <ion-col>Total capacity</ion-col>
+            <ion-col>{{station.bikeStands}}</ion-col>
+          </ion-row>
+        </ion-grid>
+      </div>
+    </ng-template>
+  </ion-card>
+</ion-content>
