@@ -61,7 +61,7 @@ export class StationProvider {
     }
 
     searchByAddressOnFirebase(address: string) {
-        var ref = this.db.list<Station>('stations', ref => ref.orderByChild('address').equalTo(address));
+        var ref = this.db.list<Station>('stations', ref => ref.orderByChild('address'));
         return this.parseFirebaseRef(ref);
     }
 
@@ -97,11 +97,11 @@ export class StationProvider {
     }
 
     parseFirebaseRef(ref) {
-        return ref.snapshotChanges().pipe(map(changes => {
+        return ref.snapshotChanges().pipe(map((changes: any) => {
               return changes.map(c => ({
                 key: c.payload.key, ...c.payload.val()
               }))
-        }));        
+        }));
     }
 
 }
