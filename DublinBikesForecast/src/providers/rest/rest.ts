@@ -1,6 +1,5 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { Station } from '../../data-model/Station';
 
 /*
   Generated class for the RestProvider provider.

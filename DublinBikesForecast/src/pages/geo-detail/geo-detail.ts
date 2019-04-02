@@ -4,7 +4,6 @@ import { CommonProvider } from '../../providers/common/common';
 import { StationProvider } from '../../providers/station/station';
 import leaflet from 'leaflet';
 import { Station } from '../../data-model/Station';
-import { Observable, of } from 'rxjs';
 import { DetailPage } from '../detail/detail';
 import { HomePage } from '../home/home';
 
