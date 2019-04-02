@@ -7,6 +7,9 @@
 /__pycache__
 /report
 /report30
+/DublinBikesForecast/www/build/*
+/DublinBikesForecast/node_modules/*
+/DublinBikesForecast/.sourcemaps/*
 
 # ignore all CSV files
 *.csv
