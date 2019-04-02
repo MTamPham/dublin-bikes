@@ -79,7 +79,18 @@ export class DetailPage {
       }
 
       var address = new String(searchTerm).toLowerCase();
-      this.stationList$ = this.stationProvider.searchByAddressOnFirebase(address);  
+      this.stationList$ = this.stationProvider.searchByAddressOnFirebase(address);
+      this.stationList$.subscribe(
+        stations => {
+          let stationList: Station[] = stations as Station[];
+          stationList = stationList.filter(function(obj, index, stationList) {
+            if (obj.address.toLowerCase().indexOf(address) > -1) {
+              return obj;
+            }
+          })
+          this.stationList$ = of(stationList);
+        }),
+        error => console.warn("Error: " + error)
   }
 
   private async predict(clickedStation: Station) {
@@ -102,7 +113,7 @@ export class DetailPage {
             // turn an array into an observable
             this.stationList$ = of(stations);
         },
-        error => console.warn("Error: " + error)        
+        error => console.warn("Error: " + error)
     );
   }
 
